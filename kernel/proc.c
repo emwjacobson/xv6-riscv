@@ -683,9 +683,11 @@ procdump(void)
 }
 
 static int num_calls = 0;
+static int num_calls_specific[30] = {0}; // Slightly oversized...
 
-void add_call(void) {
+void add_call(int num) {
   num_calls++;
+  num_calls_specific[num]++;
 }
 
 int sysinfo(int in) {

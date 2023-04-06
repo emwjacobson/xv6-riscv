@@ -681,3 +681,25 @@ procdump(void)
     printf("\n");
   }
 }
+
+static int num_calls = 0;
+
+void add_call(void) {
+  num_calls++;
+}
+
+int sysinfo(int in) {
+  if (in == 0) {
+    int count = 0;
+    struct proc *p;
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      if (proc->state != UNUSED) count++;
+    }
+  } else if (in == 1) {
+    return num_calls;
+  } else if (in == 2) {
+    return get_free();
+  }
+  return -1;
+}

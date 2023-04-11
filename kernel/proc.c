@@ -55,6 +55,7 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
+      p->syscalls = 0;
   }
 }
 
@@ -683,11 +684,9 @@ procdump(void)
 }
 
 static int num_calls = 0;
-static int num_calls_specific[30] = {0}; // Slightly oversized...
 
 void add_call(int num) {
   num_calls++;
-  num_calls_specific[num]++;
 }
 
 int sysinfo(int in) {
@@ -698,10 +697,28 @@ int sysinfo(int in) {
     for(p = proc; p < &proc[NPROC]; p++) {
       if (proc->state != UNUSED) count++;
     }
+    return count;
   } else if (in == 1) {
     return num_calls;
   } else if (in == 2) {
     return get_free();
   }
   return -1;
+}
+
+int procinfo(struct pinfo *in) {
+  struct proc *p = myproc();
+  
+  struct pinfo data;
+  
+  int pg_count = p->sz >> PGSHIFT; // p->sz / PGSIZE
+  if (p->sz % PGSIZE != 0) pg_count++; // Account for loss of decimal
+
+  data.ppid = p->pid;
+  data.page_usage = pg_count;
+  data.syscall_count = p->syscalls;
+
+  copyout(p->pagetable, (uint64)in, (char *)&data, sizeof(struct pinfo));
+
+  return 0;
 }

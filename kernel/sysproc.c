@@ -96,3 +96,10 @@ uint64 sys_sysinfo(void) {
   argint(0, &in);
   return sysinfo(in);
 }
+
+uint64 sys_procinfo(void) {
+  uint64 in;
+  argaddr(0, &in);
+  procinfo((void *)in);
+  return 0;
+}

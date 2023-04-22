@@ -85,7 +85,7 @@ int get_free(void) {
   struct run *r = kmem.freelist;
   if (r == 0) return 0; // Return if null
 
-  int num = 1;
+  int num = 0;
 
   acquire(&kmem.lock);
   while (r != 0) {

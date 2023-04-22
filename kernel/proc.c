@@ -707,18 +707,20 @@ int sysinfo(int in) {
 }
 
 int procinfo(struct pinfo *in) {
+  if (in == 0) return -1;
+
   struct proc *p = myproc();
   
+  if (p == 0) return -1;
+
   struct pinfo data;
   
-  int pg_count = p->sz >> PGSHIFT; // p->sz / PGSIZE
+  int pg_count = p->sz >> PGSHIFT; // pg_count = p->sz / PGSIZE
   if (p->sz % PGSIZE != 0) pg_count++; // Account for loss of decimal
 
   data.ppid = p->pid;
   data.page_usage = pg_count;
   data.syscall_count = p->syscalls;
 
-  copyout(p->pagetable, (uint64)in, (char *)&data, sizeof(struct pinfo));
-
-  return 0;
+  return copyout(p->pagetable, (uint64)in, (char *)&data, sizeof(struct pinfo));
 }

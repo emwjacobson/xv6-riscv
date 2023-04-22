@@ -144,6 +144,8 @@ syscall(void)
     // and store its return value in p->trapframe->a0
     p->trapframe->a0 = syscalls[num]();
 
+    // Increment syscall count AFTER doing the syscall
+    // to avoid counting the current call.
     add_call(num);
     p->syscalls++;
   } else {

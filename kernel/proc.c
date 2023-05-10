@@ -124,6 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->tickets = 10000;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -452,6 +453,13 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+    #if defined(LOTTERY)
+      // TODO: Lottery Scheduler
+    #elif defined(STRIDE)
+      // TODO: Stride Scheduler
+    #else
+
+    // Round-Robin Scheduler
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -460,6 +468,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        (p->ticks)++;
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -468,6 +477,8 @@ scheduler(void)
       }
       release(&p->lock);
     }
+
+    #endif
   }
 }
 
@@ -680,4 +691,34 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint64 sched_statistics(void) {
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    if(p->state == UNUSED)
+      continue;
+    acquire(&p->lock);
+
+    printf("%d(%s): tickets: %d, ticks: %d\n", p->pid, p->name, p->tickets, p->ticks);
+
+    release(&p->lock);
+  }
+
+  return 0;
+}
+
+uint64 sched_tickets(int tickets) {
+  struct proc *p = myproc();
+
+  if (p == 0) return 0;
+
+  acquire(&p->lock);
+
+  p->tickets = tickets;
+
+  release(&p->lock);
+
+  return 0;
 }

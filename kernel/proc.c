@@ -125,6 +125,8 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->tickets = 10000;
+  p->strideTickets = 1000;
+  p->pass = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){

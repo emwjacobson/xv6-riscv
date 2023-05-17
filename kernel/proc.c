@@ -458,7 +458,7 @@ scheduler(void)
       
     #elif defined(STRIDE)
       // TODO: Stride Scheduler 
-      double bigK = 10000.0
+      double bigK = 10000.0;
       int lowestPass = -1;
       proc* lowestPassProc = 0;
 
@@ -476,7 +476,7 @@ scheduler(void)
       for(p=proc; p < &proc[NPROC]; p++) {
         acquire(&p->lock);
         if (p->state == RUNNABLE) {
-          p->pass -= lowestPass
+          p->pass -= lowestPass;
         }
         release(&p->lock);
       }

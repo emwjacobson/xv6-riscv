@@ -455,9 +455,46 @@ scheduler(void)
 
     #if defined(LOTTERY)
       // TODO: Lottery Scheduler
+      
     #elif defined(STRIDE)
-      // TODO: Stride Scheduler
+      // TODO: Stride Scheduler 
+      double bigK = 10000.0
+      int lowestPass = -1;
+      proc* lowestPassProc = 0;
+
+      // Find proc with smallest pass
+      for(p=proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == RUNNABLE && (lowestPassProc == 0 || p->pass < lowestPass)) {
+          lowestPass = p->pass;
+          lowestPassProc = p;
+        }
+        release(&p->lock);
+      }
+
+      //subtract smallest pass value from all processes to prevent overflow
+      for(p=proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == RUNNABLE) {
+          p->pass -= lowestPass
+        }
+        release(&p->lock);
+      }
+
+      // Schedule the lowest pass process
+      proc* p = lowestPassProc;
+      acquire(&p->lock);
+      p->state = RUNNING;
+      p->pass += (p->strideTickets / bigK);
+      c->proc = p;
+      (p->ticks)++;
+      swtch(&c->context, &p->context);
+
+      c->proc = 0;
+      release(&p->lock);
+
     #else
+    
 
     // Round-Robin Scheduler
     for(p = proc; p < &proc[NPROC]; p++) {

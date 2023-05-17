@@ -92,8 +92,8 @@ struct proc {
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
   //for stride
-  uint64 strideTickets;        // Number of tickets process holds
   double pass;                 // Pass value for stride scheduling
+  double stride;              // Stride value for stride scheduling
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

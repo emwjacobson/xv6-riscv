@@ -125,8 +125,8 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->tickets = 10000;
-  p->strideTickets = 1000;
-  p->pass = 0;
+  p->stride = 10000.0 / p->tickets;
+  p->pass = p->stride;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -460,18 +460,15 @@ scheduler(void)
       
     #elif defined(STRIDE)
       // TODO: Stride Scheduler 
-      double bigK = 10000.0;
-      int lowestPass = -1;
+      int lowestPass = 0;
       struct proc* lowestPassProc = 0;
 
       // Find proc with smallest pass
       for(p=proc; p < &proc[NPROC]; p++) {
-        acquire(&p->lock);
         if (p->state == RUNNABLE && (lowestPassProc == 0 || p->pass < lowestPass)) {
           lowestPass = p->pass;
           lowestPassProc = p;
         }
-        release(&p->lock);
       }
 
       //subtract smallest pass value from all processes to prevent overflow
@@ -487,7 +484,7 @@ scheduler(void)
       struct proc* p = lowestPassProc;
       acquire(&p->lock);
       p->state = RUNNING;
-      p->pass += (p->strideTickets / bigK);
+      p->pass += p->stride;
       c->proc = p;
       (p->ticks)++;
       swtch(&c->context, &p->context);

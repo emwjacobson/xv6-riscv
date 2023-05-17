@@ -459,6 +459,7 @@ scheduler(void)
       // TODO: Lottery Scheduler
       
     #elif defined(STRIDE)
+      printf("STRIDE");
       // TODO: Stride Scheduler 
       int lowestPass = 0;
       struct proc* lowestPassProc = 0;
@@ -480,8 +481,8 @@ scheduler(void)
         release(&p->lock);
       }
 
-      // Schedule the lowest pass process
-      struct proc* p = lowestPassProc;
+      // Schedule the process with the smallest pass value
+      p = lowestPassProc;
       acquire(&p->lock);
       p->state = RUNNING;
       p->pass += p->stride;

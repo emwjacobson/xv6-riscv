@@ -454,12 +454,12 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
+    printf("E\n");
     #if defined(LOTTERY)
       // TODO: Lottery Scheduler
       
     #elif defined(STRIDE)
-      printf("STRIDE");
+      printf("STRIDE\n");
       // TODO: Stride Scheduler 
       int lowestPass = 0;
       struct proc* lowestPassProc = 0;
@@ -494,7 +494,7 @@ scheduler(void)
       release(&p->lock);
 
     #else
-    
+    printf("nostride\n");
 
     // Round-Robin Scheduler
     for(p = proc; p < &proc[NPROC]; p++) {

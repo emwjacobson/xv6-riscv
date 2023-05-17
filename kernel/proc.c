@@ -460,7 +460,7 @@ scheduler(void)
       // TODO: Stride Scheduler 
       double bigK = 10000.0;
       int lowestPass = -1;
-      proc* lowestPassProc = 0;
+      struct proc* lowestPassProc = 0;
 
       // Find proc with smallest pass
       for(p=proc; p < &proc[NPROC]; p++) {

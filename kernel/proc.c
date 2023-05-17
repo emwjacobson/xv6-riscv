@@ -134,6 +134,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->tickets = 10000;
+  p->ticks = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -743,7 +744,10 @@ uint64 sched_statistics(void) {
       continue;
     acquire(&p->lock);
 
-    printf("%d(%s): tickets: %d, ticks: %d\n", p->pid, p->name, p->tickets, p->ticks);
+    if (p->tickets == 10000) // Based on TAs email, this sounds like what we have to do
+      printf("%d(%s): tickets: %s, ticks: %d\n", p->pid, p->name, "xxx", p->ticks);
+    else
+      printf("%d(%s): tickets: %d, ticks: %d\n", p->pid, p->name, p->tickets, p->ticks);
 
     release(&p->lock);
   }
@@ -758,6 +762,7 @@ uint64 sched_tickets(int tickets) {
 
   acquire(&p->lock);
 
+  if (tickets > 10000) tickets = 10000;
   p->tickets = tickets;
 
   release(&p->lock);

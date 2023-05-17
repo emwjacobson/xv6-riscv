@@ -482,7 +482,7 @@ scheduler(void)
       }
 
       // Schedule the lowest pass process
-      proc* p = lowestPassProc;
+      struct proc* p = lowestPassProc;
       acquire(&p->lock);
       p->state = RUNNING;
       p->pass += (p->strideTickets / bigK);

@@ -134,7 +134,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->tickets = 10000;
+  p->stride = 10000.0 / p->tickets;
   p->ticks = 0;
+  p->pass = p->stride;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -462,7 +464,7 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
+    
     #if defined(LOTTERY)
 
     int total_tickets = 0;
@@ -499,7 +501,40 @@ scheduler(void)
     }
 
     #elif defined(STRIDE)
-      // TODO: Stride Scheduler
+    
+    int lowestPass = 0;
+    struct proc* lowestPassProc = 0;
+
+    // Find proc with smallest pass
+    for(p=proc; p < &proc[NPROC]; p++) {
+      if (p->state == RUNNABLE && (lowestPassProc == 0 || p->pass < lowestPass)) {
+        lowestPass = p->pass;
+        lowestPassProc = p;
+      }
+    }
+    if (lowestPassProc == 0) continue;
+
+    //subtract smallest pass value from all processes to prevent overflow
+    for(p=proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE) {
+        p->pass -= lowestPass;
+      }
+      release(&p->lock);
+    }
+
+    // Schedule the process with the smallest pass value
+    p = lowestPassProc;
+    acquire(&p->lock);
+    p->state = RUNNING;
+    p->pass += p->stride;
+    c->proc = p;
+    (p->ticks)++;
+    swtch(&c->context, &p->context);
+
+    c->proc = 0;
+    release(&p->lock);
+
     #else
 
     // Round-Robin Scheduler
@@ -764,6 +799,7 @@ uint64 sched_tickets(int tickets) {
 
   if (tickets > 10000) tickets = 10000;
   p->tickets = tickets;
+  p->stride = 10000.0 / p->tickets;
 
   release(&p->lock);
 

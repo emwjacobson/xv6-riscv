@@ -472,7 +472,9 @@ scheduler(void)
           lowestPassProc = p;
         }
       }
-      if (lowestPassProc == 0) continue;
+      if (lowestPassProc == 0) {
+        continue;
+      }
 
       //subtract smallest pass value from all processes to prevent overflow
       for(p=proc; p < &proc[NPROC]; p++) {

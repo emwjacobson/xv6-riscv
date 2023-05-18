@@ -126,6 +126,7 @@ found:
   p->state = USED;
   p->tickets = 10000;
   p->stride = 10000.0 / p->tickets;
+  p->ticks = 0;
   p->pass = p->stride;
 
   // Allocate a trapframe page.
@@ -480,6 +481,7 @@ scheduler(void)
         }
         release(&p->lock);
       }
+      if (lowestPassProc == 0) continue;
 
       // Schedule the process with the smallest pass value
       p = lowestPassProc;
@@ -754,6 +756,7 @@ uint64 sched_tickets(int tickets) {
   acquire(&p->lock);
 
   p->tickets = tickets;
+  p->stride = 10000.0 / p->tickets;
 
   release(&p->lock);
 

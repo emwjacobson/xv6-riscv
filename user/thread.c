@@ -4,22 +4,23 @@
 
 int thread_create(void *(startup_routine)(void*), void *arg) {
     // Allocate user stack of PGSIZE bytes
-    // void *stack = malloc(PGSIZE);
+    void *stack = malloc(PGSIZE);
 
     // Call clone() to create child
-    // int ret = clone(stack);
+    int ret = clone(stack);
 
-    // if (ret == -1) { // Parent failed to clone. Child doesn't exist
-
-    // } else if (ret == 0) { // Parent
-
-    // } else { // Child
-    //     startup_routine(arg);
-    //     exit(0);
-    // }
-    // return ret;
-
-    return 0;
+    if (ret == -1) { // Parent failed to clone. Child doesn't exist
+        return -1;
+    } else if (ret == 0) { // Child
+        // printf("Child: %d\n", ret);
+        startup_routine(arg);
+        free(stack);
+        exit(0);
+    } else { // Parent
+        // printf("Parent: %d\n", ret);
+        return 0;
+    }
+    return ret;
 }
 
 // https://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html

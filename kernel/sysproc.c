@@ -92,12 +92,11 @@ sys_uptime(void)
 
 uint64 sys_clone(void)
 {
-    void *stack;
-    if (argptr(0, (void *)&stack, sizeof(void *)) < 0)
-        return -1;
+    uint64 stack;
+    argaddr(0, &stack);
     
     // Create a new thread using clone()
-    int pid = clone(stack);
+    int pid = clone((void *)stack);
     
     return pid;
 }

@@ -53,6 +53,7 @@ procinit(void)
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
+      p->nexttid = 1;
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
   }
@@ -123,6 +124,7 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
+  p->thread_id = 0;
   p->state = USED;
   p->nexttid = 1;
 
@@ -150,6 +152,57 @@ found:
   return p;
 }
 
+static struct proc*
+allocproc_thread(void)
+{
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state == UNUSED) {
+      goto found;
+    } else {
+      release(&p->lock);
+    }
+  }
+  return 0;
+
+found:
+  p->pid = allocpid();
+  p->parent = myproc();
+  p->thread_id = p->parent->nexttid;
+  p->parent->nexttid++;
+  p->state = USED;
+  p->pagetable = p->parent->pagetable;
+
+  // Allocate a trapframe page.
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // An empty user page table.
+  // p->pagetable = proc_pagetable(p);
+  // if(p->pagetable == 0){
+  //   freeproc(p);
+  //   release(&p->lock);
+  //   return 0;
+  // }
+  if (mappages(p->pagetable, TRAPFRAME - (PGSIZE * p->thread_id), PGSIZE,
+                (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
+    return 0;
+  }
+
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
+
+  return p;
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -161,6 +214,25 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  p->pagetable = 0;
+  p->sz = 0;
+  p->pid = 0;
+  p->parent = 0;
+  p->name[0] = 0;
+  p->chan = 0;
+  p->killed = 0;
+  p->xstate = 0;
+  p->state = UNUSED;
+}
+
+static void
+freeproc_thread(struct proc *p)
+{
+  if(p->trapframe)
+    kfree((void*)p->trapframe);
+  
+  uvmunmap(p->pagetable, TRAPFRAME - (PGSIZE * p->thread_id), 1, 0);
+  p->trapframe = 0;
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -331,37 +403,43 @@ fork(void)
 // the stack argument is the starting address of the user-level stack
 int clone(void *stack)
 {
-    // Check if the stack pointer is valid
-    if (stack == NULL || ((uint)stack % PGSIZE) != 0)
-        return -1;
+  int i, pid;
+  struct proc *np;
+  struct proc *p = myproc(); // Current (parent) process
 
-    // Find a free slot in the thread table for the child
-    int i;
-    for (i = 0; i < NTHREAD; i++)
-    {
-        if (curproc->threads[i].state == UNUSED)
-            break;
-    }
-    
-    // Check if there is space for a new thread
-    if (i == NTHREAD)
-        return -1;
+  if((np = allocproc_thread()) == 0) {
+    return -1;
+  }
 
-    // Allocate a new thread structure
-    struct thread *t = &curproc->threads[i];
-    
-    // Initialize the thread structure
-    t->parent = curthread();
-    t->tf = curthread()->tf; // Copy the trapframe from the parent
-    t->tf->esp = (uint)stack; // Set the stack pointer for the child thread
-    t->state = RUNNABLE;
-    t->tid = curproc->nexttid++;
-    
-    // Return the child's thread ID to the parent or 0 to the child
-    if (copyout(curproc->pagetable, (uint)&t->tid, stack - 4, sizeof(t->tid)) < 0)
-        return -1;
-    
-    return t->tid;
+    // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  np->trapframe->sp = (uint64)stack;
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+
+  // increment reference counts on open file descriptors.
+  for(i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+
+  return pid;
 }
 
 
@@ -454,7 +532,12 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
-          freeproc(pp);
+          if (pp->thread_id == 0)
+            freeproc(pp);
+          else {
+            freeproc_thread(pp);
+          }
+
           release(&pp->lock);
           release(&wait_lock);
           return pid;

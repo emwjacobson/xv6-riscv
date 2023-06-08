@@ -107,5 +107,4 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   int nexttid;                      // Next available thread ID
-  struct thread threads[16];   // Thread table
 };

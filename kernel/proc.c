@@ -124,6 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->nexttid = 1;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -324,6 +325,45 @@ fork(void)
 
   return pid;
 }
+
+// Copies fork with a few key differences
+// uses the same address space as the parent process
+// the stack argument is the starting address of the user-level stack
+int clone(void *stack)
+{
+    // Check if the stack pointer is valid
+    if (stack == NULL || ((uint)stack % PGSIZE) != 0)
+        return -1;
+
+    // Find a free slot in the thread table for the child
+    int i;
+    for (i = 0; i < NTHREAD; i++)
+    {
+        if (curproc->threads[i].state == UNUSED)
+            break;
+    }
+    
+    // Check if there is space for a new thread
+    if (i == NTHREAD)
+        return -1;
+
+    // Allocate a new thread structure
+    struct thread *t = &curproc->threads[i];
+    
+    // Initialize the thread structure
+    t->parent = curthread();
+    t->tf = curthread()->tf; // Copy the trapframe from the parent
+    t->tf->esp = (uint)stack; // Set the stack pointer for the child thread
+    t->state = RUNNABLE;
+    t->tid = curproc->nexttid++;
+    
+    // Return the child's thread ID to the parent or 0 to the child
+    if (copyout(curproc->pagetable, (uint)&t->tid, stack - 4, sizeof(t->tid)) < 0)
+        return -1;
+    
+    return t->tid;
+}
+
 
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.

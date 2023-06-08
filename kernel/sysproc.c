@@ -89,3 +89,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64 sys_clone(void)
+{
+    void *stack;
+    if (argptr(0, (void *)&stack, sizeof(void *)) < 0)
+        return -1;
+    
+    // Create a new thread using clone()
+    int pid = clone(stack);
+    
+    return pid;
+}

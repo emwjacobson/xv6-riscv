@@ -403,6 +403,11 @@ fork(void)
 // the stack argument is the starting address of the user-level stack
 int clone(void *stack)
 {
+
+  if (stack == (void *)0 || (uint64)stack % PGSIZE != 0) {
+    return -1;
+  }
+
   int i, pid;
   struct proc *np;
   struct proc *p = myproc(); // Current (parent) process

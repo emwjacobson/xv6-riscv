@@ -404,7 +404,7 @@ fork(void)
 int clone(void *stack)
 {
 
-  if (stack == (void *)0 || (uint64)stack % PGSIZE != 0) {
+  if (stack == (void *)0) {
     return -1;
   }
 
